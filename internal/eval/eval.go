@@ -86,17 +86,31 @@ func GenerateEvalScriptBody(inst dataset.Instance, rs spec.RepoSpec) string {
 	testFiles := TestFilesFromPatch(inst.TestPatch)
 
 	var b strings.Builder
-	b.WriteString("set +u\n") // conda activate may reference unset vars (e.g. PS1)
 	b.WriteString("source /opt/miniconda3/bin/activate\n")
 	if !rs.NoUseEnv {
 		b.WriteString("conda activate testbed\n")
 	}
-	b.WriteString("set -u\n")
 	b.WriteString("cd /testbed\n")
 
 	// Emit eval commands (locale setup, env vars, etc.)
 	for _, cmd := range rs.EvalEnvVars {
 		b.WriteString(cmd + "\n")
+	}
+
+	// Safe directory + diagnostics — matches upstream
+	b.WriteString("git config --global --add safe.directory /testbed\n")
+	b.WriteString("cd /testbed\n")
+	b.WriteString("git status\n")
+	b.WriteString("git show\n")
+	b.WriteString(fmt.Sprintf("git -c core.fileMode=false diff %s\n", inst.BaseCommit))
+	b.WriteString("source /opt/miniconda3/bin/activate\n")
+	if !rs.NoUseEnv {
+		b.WriteString("conda activate testbed\n")
+	}
+
+	// Re-run install command — matches upstream eval behavior
+	if rs.Install != "" {
+		b.WriteString(rs.Install + "\n")
 	}
 
 	// Non-root user setup for old matplotlib etc.

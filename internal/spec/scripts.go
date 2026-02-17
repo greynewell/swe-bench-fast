@@ -7,32 +7,47 @@ import (
 
 // GenerateSetupEnvScript generates the script that creates the conda environment
 // and installs dependencies for a given spec.
+// Matches upstream make_env_script_list_py.
 func GenerateSetupEnvScript(s ImageSpec) string {
 	var b strings.Builder
 	b.WriteString("#!/bin/bash\nset -euxo pipefail\n\n")
-
-	// Create conda environment with the specified Python version (use conda-forge only to avoid TOS)
-	b.WriteString(fmt.Sprintf("conda create -n testbed python=%s -y --override-channels -c conda-forge\n", s.RepoSpec.Python))
 	b.WriteString("source /opt/miniconda3/bin/activate\n")
-	b.WriteString("conda activate testbed\n\n")
 
-	// Install conda packages (if packages field is not a file reference)
 	pkg := s.RepoSpec.Packages
-	if pkg != "" && pkg != "requirements.txt" && pkg != "environment.yml" {
-		b.WriteString(fmt.Sprintf("conda install -y %s\n\n", pkg))
+	switch {
+	case pkg == "requirements.txt":
+		// Create environment, then install from requirements
+		b.WriteString(fmt.Sprintf("conda create -n testbed python=%s -y\n", s.RepoSpec.Python))
+
+		// Upstream fetches requirements.txt from GitHub at the base commit.
+		// We install from repo files in the repo setup script (after clone).
+		// Here we just create the environment.
+
+	case pkg == "environment.yml":
+		if s.RepoSpec.NoUseEnv {
+			// conda create based installation
+			b.WriteString(fmt.Sprintf("conda create -c conda-forge -n testbed python=%s -y\n", s.RepoSpec.Python))
+			// environment.yml will be applied in repo setup script
+		} else {
+			// conda env create based installation — handled in repo setup script
+			// Just create a placeholder here; the env is fully set up after clone.
+			b.WriteString(fmt.Sprintf("conda create -n testbed python=%s -y\n", s.RepoSpec.Python))
+		}
+
+	default:
+		// Inline packages: conda create with packages
+		if pkg != "" {
+			b.WriteString(fmt.Sprintf("conda create -n testbed python=%s %s -y\n", s.RepoSpec.Python, pkg))
+		} else {
+			b.WriteString(fmt.Sprintf("conda create -n testbed python=%s -y\n", s.RepoSpec.Python))
+		}
 	}
 
-	// Install pip packages (quoted to prevent shell interpretation of <, >, etc.)
+	b.WriteString("conda activate testbed\n\n")
+
+	// Install pip packages — matches upstream (no --no-cache-dir)
 	if len(s.RepoSpec.PipPackages) > 0 {
-		b.WriteString("python -m pip install --no-cache-dir \\\n")
-		for i, pkg := range s.RepoSpec.PipPackages {
-			if i < len(s.RepoSpec.PipPackages)-1 {
-				b.WriteString(fmt.Sprintf("    '%s' \\\n", pkg))
-			} else {
-				b.WriteString(fmt.Sprintf("    '%s'\n", pkg))
-			}
-		}
-		b.WriteString("\n")
+		b.WriteString(fmt.Sprintf("python -m pip install %s\n", strings.Join(s.RepoSpec.PipPackages, " ")))
 	}
 
 	return b.String()
@@ -40,18 +55,36 @@ func GenerateSetupEnvScript(s ImageSpec) string {
 
 // GenerateSetupRepoScript generates the script that clones the repo,
 // checks out the base commit, and runs the install command.
+// Matches upstream make_repo_script_list_py.
 func GenerateSetupRepoScript(s ImageSpec) string {
 	var b strings.Builder
 	b.WriteString("#!/bin/bash\nset -euxo pipefail\n\n")
-	b.WriteString("source /opt/miniconda3/bin/activate\n")
-	b.WriteString("conda activate testbed\n\n")
 
-	// Clone and checkout (fetch specific commit if not in default branch)
 	repoURL := fmt.Sprintf("https://github.com/%s.git", s.Repo)
-	b.WriteString(fmt.Sprintf("git clone %s /testbed\n", repoURL))
-	b.WriteString("cd /testbed\n")
-	b.WriteString(fmt.Sprintf("git checkout %s 2>/dev/null || (git fetch origin %s && git checkout %s)\n",
-		s.BaseCommit, s.BaseCommit, s.BaseCommit))
+	repoDir := "/testbed"
+
+	// Clone and checkout — matches upstream
+	b.WriteString(fmt.Sprintf("git clone -o origin --single-branch %s %s\n", repoURL, repoDir))
+	b.WriteString(fmt.Sprintf("chmod -R 777 %s\n", repoDir))
+	b.WriteString(fmt.Sprintf("cd %s\n", repoDir))
+	b.WriteString(fmt.Sprintf("git reset --hard %s\n", s.BaseCommit))
+
+	// Remove the remote and future tags so the agent won't see newer commits
+	b.WriteString("git remote remove origin\n")
+	b.WriteString(fmt.Sprintf("TARGET_TIMESTAMP=$(git show -s --format=%%ci %s)\n", s.BaseCommit))
+	b.WriteString(`git tag -l | while read tag; do TAG_COMMIT=$(git rev-list -n 1 "$tag"); TAG_TIME=$(git show -s --format=%ci "$TAG_COMMIT"); if [[ "$TAG_TIME" > "$TARGET_TIMESTAMP" ]]; then git tag -d "$tag"; fi; done` + "\n")
+	b.WriteString("git reflog expire --expire=now --all\n")
+	b.WriteString("git gc --prune=now --aggressive\n")
+
+	// Verify future logs aren't available
+	b.WriteString(`AFTER_TIMESTAMP=$(date -d "$TARGET_TIMESTAMP + 1 second" '+%Y-%m-%d %H:%M:%S')` + "\n")
+	b.WriteString(`COMMIT_COUNT=$(git log --oneline --all --since="$AFTER_TIMESTAMP" | wc -l)` + "\n")
+	b.WriteString(`[ "$COMMIT_COUNT" -eq 0 ] || exit 1` + "\n\n")
+
+	// Activate conda environment
+	b.WriteString("source /opt/miniconda3/bin/activate\n")
+	b.WriteString("conda activate testbed\n")
+	b.WriteString("echo \"Current environment: $CONDA_DEFAULT_ENV\"\n\n")
 
 	// Install packages from repo files (after checkout, before pre_install)
 	if s.RepoSpec.Packages == "requirements.txt" {
@@ -63,69 +96,29 @@ func GenerateSetupRepoScript(s ImageSpec) string {
 	} else if s.RepoSpec.Packages == "environment.yml" {
 		if paths, ok := repoEnvYMLPaths[s.Repo]; ok {
 			for _, p := range paths {
-				b.WriteString(fmt.Sprintf("if [ -f %s ]; then conda env update --file %s; fi\n", p, p))
+				if s.RepoSpec.NoUseEnv {
+					b.WriteString(fmt.Sprintf("if [ -f %s ]; then conda env update -f %s; fi\n", p, p))
+				} else {
+					b.WriteString(fmt.Sprintf("if [ -f %s ]; then conda env update --file %s; fi\n", p, p))
+				}
 			}
 		}
 	}
 
-	// Run pre-install commands (after checkout, before install)
+	// Run pre-install commands
 	for _, cmd := range s.RepoSpec.PreInstall {
 		b.WriteString(cmd + "\n")
 	}
 
-	// Generate constraints file from pinned packages so pip install -e .
-	// doesn't upgrade them (e.g., numpy==1.25.2 → numpy 2.0)
-	pinnedPkgs := pinnedPackages(s.RepoSpec.PipPackages)
-	if len(pinnedPkgs) > 0 {
-		b.WriteString("cat > /tmp/constraints.txt << 'CONSTRAINTS_EOF'\n")
-		for _, pkg := range pinnedPkgs {
-			b.WriteString(pkg + "\n")
-		}
-		b.WriteString("CONSTRAINTS_EOF\n")
-	}
-
 	// Run install command
 	if s.RepoSpec.Install != "" {
-		install := s.RepoSpec.Install
-		if len(pinnedPkgs) > 0 {
-			install = addConstraintsFlag(install)
-		}
-		b.WriteString(install + "\n")
+		b.WriteString(s.RepoSpec.Install + "\n")
 	}
 
-	// Re-install PipPackages after project install to enforce our pins.
-	// pip install -e . may upgrade packages (e.g., pytest 7→8, numpy 1→2).
-	if len(s.RepoSpec.PipPackages) > 0 {
-		b.WriteString("\n# Re-pin dependencies after project install\n")
-		b.WriteString("python -m pip install --no-cache-dir \\\n")
-		for i, pkg := range s.RepoSpec.PipPackages {
-			if i < len(s.RepoSpec.PipPackages)-1 {
-				b.WriteString(fmt.Sprintf("    '%s' \\\n", pkg))
-			} else {
-				b.WriteString(fmt.Sprintf("    '%s'\n", pkg))
-			}
-		}
-	}
+	// Create a clean git commit — matches upstream
+	b.WriteString("\ngit config --global user.email setup@swebench.config\n")
+	b.WriteString("git config --global user.name SWE-bench\n")
+	b.WriteString("git commit --allow-empty -am SWE-bench\n")
 
 	return b.String()
-}
-
-// pinnedPackages returns PipPackages entries that contain version constraints.
-func pinnedPackages(pkgs []string) []string {
-	var pinned []string
-	for _, pkg := range pkgs {
-		if strings.Contains(pkg, "==") || strings.Contains(pkg, "<=") ||
-			strings.Contains(pkg, "<") || strings.Contains(pkg, ">=") {
-			pinned = append(pinned, pkg)
-		}
-	}
-	return pinned
-}
-
-// addConstraintsFlag appends -c /tmp/constraints.txt to a pip install command.
-func addConstraintsFlag(install string) string {
-	if strings.Contains(install, "pip install") {
-		return install + " -c /tmp/constraints.txt"
-	}
-	return install
 }

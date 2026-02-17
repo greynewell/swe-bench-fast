@@ -251,8 +251,9 @@ func TestGenerateSetupEnvScriptCondaPackages(t *testing.T) {
 	}
 
 	script := GenerateSetupEnvScript(imageSpec)
-	if !strings.Contains(script, "conda install -y numpy scipy cython pytest pandas matplotlib") {
-		t.Errorf("missing conda install for sklearn packages, got:\n%s", script)
+	// Upstream puts inline packages in the conda create command
+	if !strings.Contains(script, "conda create -n testbed python=3.6 numpy scipy cython pytest pandas matplotlib -y") {
+		t.Errorf("missing conda create with sklearn packages, got:\n%s", script)
 	}
 }
 
@@ -273,8 +274,8 @@ func TestGenerateSetupRepoScript(t *testing.T) {
 	if !strings.Contains(script, "git clone") {
 		t.Error("missing git clone")
 	}
-	if !strings.Contains(script, "git checkout abc123") {
-		t.Error("missing git checkout")
+	if !strings.Contains(script, "git reset --hard abc123") {
+		t.Error("missing git reset --hard")
 	}
 	if !strings.Contains(script, "pip install -e .") {
 		t.Error("missing install command")
@@ -287,7 +288,7 @@ func TestGenerateSetupRepoScript(t *testing.T) {
 
 func TestDockerfileGeneration(t *testing.T) {
 	base := GenerateBaseDockerfile("x86_64")
-	if !strings.Contains(base, "FROM ubuntu:22.04") {
+	if !strings.Contains(base, "ubuntu:22.04") {
 		t.Error("base dockerfile missing ubuntu base")
 	}
 	if !strings.Contains(base, "miniconda") {
