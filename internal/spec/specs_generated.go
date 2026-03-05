@@ -3040,6 +3040,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3053,6 +3054,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3066,6 +3068,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3079,6 +3082,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3092,6 +3096,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3105,6 +3110,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3118,6 +3124,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3131,6 +3138,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3144,6 +3152,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3157,6 +3166,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3178,6 +3188,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3199,6 +3210,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3220,6 +3232,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3241,6 +3254,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3262,6 +3276,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3283,6 +3298,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3304,6 +3320,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3325,6 +3342,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3346,6 +3364,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3367,6 +3386,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3388,6 +3408,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3401,6 +3422,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3414,6 +3436,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3427,6 +3450,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3440,6 +3464,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3453,6 +3478,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3466,6 +3492,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3479,6 +3506,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3492,6 +3520,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3505,6 +3534,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3519,6 +3549,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3533,6 +3564,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3547,6 +3579,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
@@ -3561,6 +3594,7 @@ func init() {
 				"tox==4.16.0",
 				"tox-current-env==0.0.11",
 				"Jinja2==3.0.3",
+				"Pygments==2.18.0",
 			},
 			PreInstall: []string{
 				"sed -i 's/pytest/pytest -rA/' tox.ini",
