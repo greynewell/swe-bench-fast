@@ -4,10 +4,10 @@ timeout = 300
 # arch auto-detected at runtime; override with "x86_64" or "aarch64"
 # arch = "x86_64"
 checkpoint_dir = ".checkpoints"
-image_registry = "ghcr.io/epoch-research"
-image_prefix = "swe-bench.eval"
+arm64_registry = "docker.io/greynewell/swe-bench-arm64"
+x86_registry = "ghcr.io/epoch-research"
+x86_prefix = "swe-bench.eval"
 mem_limit = "4g"
-use_epoch = false
 tmpfs = false
 runtime = ""
 build_workers = 4

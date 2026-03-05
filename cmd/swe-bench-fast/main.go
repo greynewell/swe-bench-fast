@@ -32,10 +32,10 @@ type appConfig struct {
 	Timeout       int    `toml:"timeout"`
 	Arch          string `toml:"arch"`
 	CheckpointDir string `toml:"checkpoint_dir"`
-	ImageRegistry string `toml:"image_registry"`
-	ImagePrefix   string `toml:"image_prefix"`
+	ARM64Registry string `toml:"arm64_registry"`
+	X86Registry   string `toml:"x86_registry"`
+	X86Prefix     string `toml:"x86_prefix"`
 	MemLimit      string `toml:"mem_limit"`
-	UseEpoch      bool   `toml:"use_epoch"`
 	Tmpfs         bool   `toml:"tmpfs"`
 	Runtime       string `toml:"runtime"`
 	BuildWorkers  int    `toml:"build_workers"`
@@ -70,14 +70,13 @@ func loadConfig() appConfig {
 		Timeout:       300,
 		Arch:          defaultArch(),
 		CheckpointDir: ".checkpoints",
-		ImageRegistry: "ghcr.io/epoch-research",
-		ImagePrefix:   "swe-bench.eval",
+		ARM64Registry: "",
+		X86Registry:   "ghcr.io/epoch-research",
+		X86Prefix:     "swe-bench.eval",
 		MemLimit:      "4g",
-		UseEpoch:      false,
 		Tmpfs:         runtime.GOOS == "linux",
 		BuildWorkers:  4,
 	}
-	// Try to load config file, ignore errors (use defaults)
 	_ = config.Load("swe-bench-fast.toml", "SWE_BENCH_FAST", &cfg)
 	return cfg
 }
@@ -95,7 +94,6 @@ func runCmd() *cli.Command {
 	cmd.AddStringFlag("format", "table", "Output format: table or json")
 	cmd.AddStringFlag("run-id", "", "Run identifier for checkpointing")
 	cmd.AddStringFlag("output", "", "Path to write JSON report (optional)")
-	cmd.AddBoolFlag("use-epoch", false, "Use Epoch Research pre-built images")
 	cmd.AddBoolFlag("tmpfs", false, "Mount /testbed on tmpfs (default: true on Linux)")
 	cmd.AddStringFlag("runtime", "", "Container runtime (e.g. crun)")
 
@@ -127,14 +125,12 @@ func runCmd() *cli.Command {
 			runID = fmt.Sprintf("run-%d", time.Now().Unix())
 		}
 
-		useEpoch := cmd.GetBool("use-epoch") || cfg.UseEpoch
 		useTmpfs := cmd.GetBool("tmpfs") || cfg.Tmpfs
 		runtimeStr := cmd.GetString("runtime")
 		if runtimeStr == "" {
 			runtimeStr = cfg.Runtime
 		}
 
-		// Initialize Docker SDK client
 		client, err := docker.NewClient()
 		if err != nil {
 			return fmt.Errorf("docker client: %w", err)
@@ -149,11 +145,11 @@ func runCmd() *cli.Command {
 			Timeout:         time.Duration(timeout) * time.Second,
 			RunID:           runID,
 			Arch:            cfg.Arch,
-			ImageRegistry:   cfg.ImageRegistry,
-			ImagePrefix:     cfg.ImagePrefix,
+			ARM64Registry:   cfg.ARM64Registry,
+			X86Registry:     cfg.X86Registry,
+			X86Prefix:       cfg.X86Prefix,
 			MemLimit:        cfg.MemLimit,
 			Client:          client,
-			UseEpoch:        useEpoch,
 			Tmpfs:           useTmpfs,
 			Runtime:         runtimeStr,
 		}
@@ -346,7 +342,6 @@ func validateCmd() *cli.Command {
 	}
 
 	cmd.AddStringFlag("dataset", "", "Path to SWE-bench dataset (JSON or JSONL)")
-	cmd.AddStringFlag("arch", "", "Architecture (x86_64 or aarch64)")
 	cmd.AddBoolFlag("smoke", false, "Run smoke test (conda activate, pytest --version) in each container")
 
 	cmd.Run = func(cmd *cli.Command, args []string) error {
@@ -357,18 +352,12 @@ func validateCmd() *cli.Command {
 			return fmt.Errorf("--dataset is required")
 		}
 
-		// Initialize Docker SDK client
 		client, err := docker.NewClient()
 		if err != nil {
 			return fmt.Errorf("docker client: %w", err)
 		}
 		defer client.Close()
 		docker.SetDefaultClient(client)
-
-		arch := cmd.GetString("arch")
-		if arch == "" {
-			arch = client.ServerArch(context.Background())
-		}
 
 		runSmoke := cmd.GetBool("smoke")
 
@@ -380,52 +369,48 @@ func validateCmd() *cli.Command {
 
 			fmt.Printf("Validating %d instances...\n", len(instances))
 
-			var passed, missing, failed, skipped int
-			for _, inst := range instances {
-				imageSpec, err := spec.MakeImageSpec(inst, arch)
-				if err != nil {
-					fmt.Printf("  SKIP %s: no spec (%v)\n", inst.InstanceID, err)
-					skipped++
-					continue
-				}
+			rCfg := runner.Config{
+				Arch:          cfg.Arch,
+				ARM64Registry: cfg.ARM64Registry,
+				X86Registry:   cfg.X86Registry,
+				X86Prefix:     cfg.X86Prefix,
+			}
 
-				exists, err := docker.ImageExists(ctx, imageSpec.InstanceTag)
+			var passed, missing, failed int
+			for _, inst := range instances {
+				image, platform := runner.ResolveImage(ctx, rCfg, inst)
+
+				exists, err := docker.ImageExists(ctx, image)
 				if err != nil {
 					fmt.Printf("  ERROR %s: %v\n", inst.InstanceID, err)
 					failed++
 					continue
 				}
 				if !exists {
-					// Fall back to Epoch image check
-					epochImage := docker.ImageName(cfg.ImageRegistry, cfg.ImagePrefix, inst.InstanceID, arch)
-					exists, _ = docker.ImageExists(ctx, epochImage)
-					if !exists {
-						fmt.Printf("  MISSING %s: image not found (%s)\n", inst.InstanceID, imageSpec.InstanceTag)
-						missing++
-						continue
-					}
+					fmt.Printf("  MISSING %s: %s\n", inst.InstanceID, image)
+					missing++
+					continue
 				}
 
 				if !runSmoke {
-					fmt.Printf("  OK %s: image exists\n", inst.InstanceID)
+					fmt.Printf("  OK %s: %s (%s)\n", inst.InstanceID, image, platform)
 					passed++
 					continue
 				}
 
-				// Smoke test: start container, conda activate, pytest --version
-				if err := smokeTest(ctx, imageSpec.InstanceTag, inst.InstanceID, cfg.MemLimit); err != nil {
+				if err := smokeTest(ctx, image, inst.InstanceID, cfg.MemLimit); err != nil {
 					fmt.Printf("  FAIL %s: %v\n", inst.InstanceID, err)
 					failed++
 					continue
 				}
 
-				fmt.Printf("  OK %s: smoke test passed\n", inst.InstanceID)
+				fmt.Printf("  OK %s: smoke test passed (%s)\n", inst.InstanceID, platform)
 				passed++
 			}
 
 			fmt.Printf("\n--- Validate Summary ---\n")
-			fmt.Printf("Passed: %d | Missing: %d | Failed: %d | Skipped: %d | Total: %d\n",
-				passed, missing, failed, skipped, len(instances))
+			fmt.Printf("Passed: %d | Missing: %d | Failed: %d | Total: %d\n",
+				passed, missing, failed, len(instances))
 
 			if missing+failed > 0 {
 				return fmt.Errorf("%d images missing, %d smoke tests failed", missing, failed)

@@ -24,13 +24,13 @@ type Config struct {
 	Timeout         time.Duration
 	RunID           string
 	Arch            string
-	ImageRegistry   string
-	ImagePrefix     string
+	ARM64Registry   string // pull ARM64-native images from here (e.g. "docker.io/greynewell/swe-bench-arm64")
+	X86Registry     string // pull x86 images from here (e.g. "ghcr.io/epoch-research")
+	X86Prefix       string // image name prefix for x86 registry (e.g. "swe-bench.eval")
 	MemLimit        string
-	Client          *docker.Client // SDK client (nil = lazy init default)
-	UseEpoch        bool           // use Epoch images instead of custom
-	Tmpfs           bool           // mount /testbed on tmpfs
-	Runtime         string         // container runtime ("crun" or "")
+	Client          *docker.Client
+	Tmpfs           bool   // mount /testbed on tmpfs
+	Runtime         string // container runtime ("crun" or "")
 }
 
 // Run loads data, evaluates predictions in parallel, and returns reports.
@@ -73,18 +73,31 @@ func Run(ctx context.Context, cfg Config) ([]grading.Report, error) {
 	return reports, nil
 }
 
-// resolveImage determines which Docker image to use for an instance.
-func resolveImage(cfg Config, inst dataset.Instance) string {
-	if cfg.UseEpoch {
-		// Epoch only publishes x86_64 images regardless of host arch.
-		return docker.ImageName(cfg.ImageRegistry, cfg.ImagePrefix, inst.InstanceID, "x86_64")
+// ResolveImage determines which Docker image and platform to use for an instance.
+// Priority: local image > ARM64 registry (if set and instance is ARM64-compatible) > x86 registry.
+func ResolveImage(ctx context.Context, cfg Config, inst dataset.Instance) (image string, platform string) {
+	// Check for a locally-built image first
+	imageSpec, specErr := spec.MakeImageSpec(inst, cfg.Arch)
+	if specErr == nil {
+		exists, err := docker.ImageExists(ctx, imageSpec.InstanceTag)
+		if err == nil && exists {
+			return imageSpec.InstanceTag, archToPlatform(cfg.Arch)
+		}
 	}
-	imageSpec, err := spec.MakeImageSpec(inst, cfg.Arch)
-	if err != nil {
-		// Fall back to Epoch images if spec lookup fails
-		return docker.ImageName(cfg.ImageRegistry, cfg.ImagePrefix, inst.InstanceID, "x86_64")
+
+	// x86-only instances always use the x86 registry
+	if spec.RequiresX86(inst.InstanceID) {
+		return docker.ImageName(cfg.X86Registry, cfg.X86Prefix, inst.InstanceID, "x86_64"), "linux/amd64"
 	}
-	return imageSpec.InstanceTag
+
+	// ARM64 registry configured: use it for ARM64-compatible instances
+	if cfg.ARM64Registry != "" {
+		tag := sanitizeName(inst.InstanceID)
+		return fmt.Sprintf("%s:%s", cfg.ARM64Registry, tag), "linux/arm64"
+	}
+
+	// Fallback: x86 registry (works everywhere, emulated on ARM64)
+	return docker.ImageName(cfg.X86Registry, cfg.X86Prefix, inst.InstanceID, "x86_64"), "linux/amd64"
 }
 
 // buildCompoundScript combines patch application and eval into a single bash script.
@@ -135,15 +148,7 @@ func evalTask(ctx context.Context, cfg Config, task dataset.MergeTask) (grading.
 		Resolved:   grading.ResolvedNo,
 	}
 
-	// Determine the platform for this instance.
-	// Epoch images are always x86_64, so force linux/amd64.
-	// Custom images that require x86 also use linux/amd64 via QEMU.
-	platform := archToPlatform(cfg.Arch)
-	if cfg.UseEpoch || spec.RequiresX86(inst.InstanceID) {
-		platform = "linux/amd64"
-	}
-
-	image := resolveImage(cfg, inst)
+	image, platform := ResolveImage(ctx, cfg, inst)
 	containerName := fmt.Sprintf("swe-bench-%s-%s", cfg.RunID, sanitizeName(inst.InstanceID))
 
 	// Check if image exists locally before pulling

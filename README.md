@@ -1,10 +1,20 @@
 # swe-bench-fast
 
-A Go reimplementation of the [SWE-bench](https://www.swebench.com/SWE-bench/) evaluation harness with native ARM64 container support. Single static binary. No Python environment required.
+An eval harness for [SWE-bench](https://www.swebench.com/SWE-bench/) with native ARM64 support. It takes pre-computed predictions (patches from your agent or model), applies them inside Docker containers, runs the test suites, and grades the results. Same role as `swebench.harness.run_evaluation` in the upstream Python harness, reimplemented as a single Go binary.
+
+swe-bench-fast does not generate predictions. It only scores them.
+
+## One-command eval
+
+On ARM64 (Apple Silicon, AWS Graviton), swe-bench-fast pulls native ARM64 images for the 78% of instances that support it, and Epoch x86 images via QEMU for the rest. On x86, everything pulls natively from the Epoch registry. No image builds required.
+
+```bash
+swe-bench-fast run --dataset swe-bench-full.jsonl --predictions preds.jsonl
+```
+
+Pre-built ARM64 images: [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general)
 
 ## 6.3x test runner speedup on ARM64
-
-SWE-bench's pre-built Docker images are x86_64-only. On ARM64 hosts (Apple Silicon, AWS Graviton), every container runs through QEMU emulation. Native ARM64 images eliminate that overhead entirely.
 
 | Instance | ARM64 native (s) | x86 emulated (s) | Speedup |
 |---|---|---|---|
@@ -15,57 +25,70 @@ SWE-bench's pre-built Docker images are x86_64-only. On ARM64 hosts (Apple Silic
 | sympy__sympy-11618 | 1.9 | 8.0 | 4.2x |
 | **Total (11 instances)** | **87.3** | **551.7** | **6.3x** |
 
-Full results and methodology: [benchmark gist](https://gist.github.com/greynewell/497005bb33641503f1a5874f16578088)
+Full results: [benchmark gist](https://gist.github.com/greynewell/497005bb33641503f1a5874f16578088)
 
-Blog post with detailed writeup: [SWE-bench Tests Run 6x Faster on ARM64 with Native Containers](https://greynewell.com/blog/swe-bench-arm64-native-containers-6x-faster/)
+Blog post: [SWE-bench Tests Run 6x Faster on ARM64 with Native Containers](https://greynewell.com/blog/swe-bench-arm64-native-containers-6x-faster/)
 
-## 78% of SWE-bench runs natively on ARM64
+## Dataset format
 
-Out of 2,294 instances in the full dataset, 1,798 build and run natively on ARM64. Only 496 require x86 (mostly scikit-learn, matplotlib, and xarray) due to binary conda packages. Those still work via QEMU.
+JSONL, one instance per line. The official SWE-bench datasets from HuggingFace (`princeton-nlp/SWE-bench`, `princeton-nlp/SWE-bench_Verified`) already use this format.
 
-## Quick start
+Required fields: `instance_id`, `repo`, `base_commit`, `version`, `patch`, `test_patch`, `FAIL_TO_PASS`, `PASS_TO_PASS`
+
+## Predictions format
+
+JSONL, one prediction per line. Your agent or model generates these.
+
+```json
+{"instance_id": "django__django-13346", "model_name_or_path": "gpt-4", "model_patch": "diff --git a/..."}
+```
+
+Required fields: `instance_id` (must match dataset), `model_name_or_path`, `model_patch` (unified diff)
+
+## Commands
 
 ```bash
-# Build the binary
-make build
+# Score predictions against a dataset
+swe-bench-fast run --dataset dataset.jsonl --predictions preds.jsonl
 
-# Build native ARM64 images for a dataset
-./dist/swe-bench-fast build --dataset swe-bench-arm64.jsonl --workers 4
-
-# Run evaluations with pre-computed predictions
-./dist/swe-bench-fast run --dataset swe-bench-arm64.jsonl --predictions preds.jsonl
+# Build native images from scratch (if you want to build locally instead of pulling)
+swe-bench-fast build --dataset dataset.jsonl
 
 # Build and push to a registry
-./dist/swe-bench-fast build --dataset swe-bench-arm64.jsonl --push docker.io/youruser/swe-bench-arm64
+swe-bench-fast build --dataset dataset.jsonl --push docker.io/youruser/swe-bench-arm64
+
+# Validate that images exist (locally or on registry) before a full run
+swe-bench-fast validate --dataset dataset.jsonl
 ```
 
-### On Apple Silicon
+## Image resolution
 
-```bash
-# Docker Desktop or Colima with at least 120 GB disk, 8+ CPU cores
-# Architecture is auto-detected (aarch64)
-./dist/swe-bench-fast build --dataset swe-bench-arm64.jsonl
+The runner automatically selects the right image for each instance:
+
+1. **Local image exists?** Use it (from a previous `build`)
+2. **Instance requires x86?** Pull from the x86 registry (Epoch by default), run as `linux/amd64`
+3. **ARM64 registry configured?** Pull from there, run as `linux/arm64`
+4. **Fallback:** Pull from the x86 registry
+
+On ARM64 hardware with the default config, 1,798 of 2,294 instances get native ARM64 images. The remaining 496 (scikit-learn, matplotlib, xarray) pull x86 images and run under QEMU.
+
+## Configuration
+
+`swe-bench-fast.toml` in the working directory:
+
+```toml
+workers = 8                  # parallel eval workers
+timeout = 300                # per-instance timeout in seconds
+mem_limit = "4g"             # container memory limit
+build_workers = 4            # parallel image builds
+
+# Image registries (auto-selected per instance)
+arm64_registry = "docker.io/greynewell/swe-bench-arm64"
+x86_registry = "ghcr.io/epoch-research"
+x86_prefix = "swe-bench.eval"
 ```
 
-### On AWS Graviton
-
-```bash
-# c7g, m7g, r7g, or Graviton4 r8g instances
-# Already linux/arm64, no VM layer needed
-# Install QEMU for the 22% of instances that require x86:
-sudo apt install qemu-user-static
-./dist/swe-bench-fast build --dataset swe-bench-full.jsonl
-```
-
-## How it works
-
-Three-layer Docker image pipeline: **base** (1-2 unique) -> **env** (~60 unique) -> **instance** (2,294 total). Each layer is deduplicated and built in parallel with BuildKit. Images are tagged deterministically so builds are idempotent.
-
-The eval runner applies a patch, executes the test suite, parses pytest output, and grades results against fail-to-pass / pass-to-pass expectations. Same semantics as the upstream Python harness.
-
-## Pre-built images
-
-Pre-built ARM64 images are available on [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general). The x86-only instances (496 of 2,294) are not included; use the Epoch x86 images for those.
+All fields can be overridden with `SWE_BENCH_FAST_*` environment variables (e.g. `SWE_BENCH_FAST_WORKERS=16`).
 
 ## CI
 
