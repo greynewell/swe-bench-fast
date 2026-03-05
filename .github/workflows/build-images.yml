@@ -92,9 +92,17 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+        env:
+          GONOSUMCHECK: github.com/greynewell/*
+          GONOSUMDB: github.com/greynewell/*
+          GOPRIVATE: github.com/greynewell/*
 
       - name: Build swe-bench-fast
         run: make build
+        env:
+          GONOSUMCHECK: github.com/greynewell/*
+          GONOSUMDB: github.com/greynewell/*
+          GOPRIVATE: github.com/greynewell/*
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
@@ -154,9 +162,17 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+        env:
+          GONOSUMCHECK: github.com/greynewell/*
+          GONOSUMDB: github.com/greynewell/*
+          GOPRIVATE: github.com/greynewell/*
 
       - name: Build swe-bench-fast
         run: make build
+        env:
+          GONOSUMCHECK: github.com/greynewell/*
+          GONOSUMDB: github.com/greynewell/*
+          GOPRIVATE: github.com/greynewell/*
 
       - name: Set up QEMU for x86 emulation
         uses: docker/setup-qemu-action@v3
