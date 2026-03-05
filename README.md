@@ -63,6 +63,10 @@ Three-layer Docker image pipeline: **base** (1-2 unique) -> **env** (~60 unique)
 
 The eval runner applies a patch, executes the test suite, parses pytest output, and grades results against fail-to-pass / pass-to-pass expectations. Same semantics as the upstream Python harness.
 
+## Pre-built images
+
+Pre-built images are available on [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general).
+
 ## CI
 
 The repo includes a GitHub Actions workflow (`build-images.yml`) that builds and pushes all images via matrixed jobs on ARM64 runners. It splits the dataset into configurable chunks, filters out images that already exist on Docker Hub, and pushes each image individually so partial runs are resumable.
