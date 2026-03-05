@@ -75,8 +75,7 @@ jobs:
   build-arm64:
     needs: prepare
     if: inputs.dataset == 'arm64' || inputs.dataset == 'both'
-    runs-on:
-      labels: [self-hosted, linux, arm64]
+    runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
         chunk: ${{ fromJson(needs.prepare.outputs.arm64_chunks) }}
@@ -138,8 +137,7 @@ jobs:
   build-x86:
     needs: prepare
     if: inputs.dataset == 'x86' || inputs.dataset == 'both'
-    runs-on:
-      labels: [self-hosted, linux, arm64]
+    runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
         chunk: ${{ fromJson(needs.prepare.outputs.x86_chunks) }}
