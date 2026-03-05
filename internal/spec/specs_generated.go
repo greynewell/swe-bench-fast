@@ -2312,6 +2312,9 @@ func init() {
 		"2.15": {
 			Python: "3.9",
 			Packages: "requirements.txt",
+			PipPackages: []string{
+				"pip==23.0.1",
+			},
 			Install: "python -m pip install -e .",
 			TestCmd: testPytest,
 			NanoCPUs: 2000000000,
@@ -2956,7 +2959,7 @@ func init() {
 				"setuptools",
 				"scipy==1.5.2",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 		"0.21": {
@@ -2968,7 +2971,7 @@ func init() {
 				"setuptools",
 				"scipy==1.5.2",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 		"0.22": {
@@ -2980,7 +2983,7 @@ func init() {
 				"setuptools",
 				"scipy==1.5.2",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 		"1.3": {
@@ -2992,7 +2995,7 @@ func init() {
 				"numpy",
 				"scipy",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 		"1.4": {
@@ -3004,7 +3007,7 @@ func init() {
 				"numpy",
 				"scipy",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 		"1.5": {
@@ -3016,7 +3019,7 @@ func init() {
 				"numpy",
 				"scipy",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 		"1.6": {
@@ -3028,7 +3031,7 @@ func init() {
 				"numpy",
 				"scipy",
 			},
-			Install: "python -m pip install -v --no-use-pep517 --no-build-isolation -e .",
+			Install: "python -m pip install -v --no-build-isolation -e .",
 			TestCmd: testPytest,
 		},
 	})

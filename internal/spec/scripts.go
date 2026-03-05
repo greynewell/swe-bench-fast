@@ -45,9 +45,12 @@ func GenerateSetupEnvScript(s ImageSpec) string {
 
 	b.WriteString("conda activate testbed\n\n")
 
-	// Install pip packages — matches upstream (no --no-cache-dir)
 	if len(s.RepoSpec.PipPackages) > 0 {
-		b.WriteString(fmt.Sprintf("python -m pip install %s\n", strings.Join(s.RepoSpec.PipPackages, " ")))
+		var quoted []string
+		for _, pkg := range s.RepoSpec.PipPackages {
+			quoted = append(quoted, fmt.Sprintf("'%s'", pkg))
+		}
+		b.WriteString(fmt.Sprintf("python -m pip install %s\n", strings.Join(quoted, " ")))
 	}
 
 	return b.String()
@@ -63,7 +66,8 @@ func GenerateSetupRepoScript(s ImageSpec) string {
 	repoURL := fmt.Sprintf("https://github.com/%s.git", s.Repo)
 	repoDir := "/testbed"
 
-	// Clone and checkout — matches upstream
+	b.WriteString("cd /\n")
+	b.WriteString(fmt.Sprintf("rm -rf %s\n", repoDir))
 	b.WriteString(fmt.Sprintf("git clone -o origin --single-branch %s %s\n", repoURL, repoDir))
 	b.WriteString(fmt.Sprintf("chmod -R 777 %s\n", repoDir))
 	b.WriteString(fmt.Sprintf("cd %s\n", repoDir))
