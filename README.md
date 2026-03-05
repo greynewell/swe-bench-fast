@@ -65,11 +65,11 @@ The eval runner applies a patch, executes the test suite, parses pytest output, 
 
 ## Pre-built images
 
-Pre-built images are available on [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general).
+Pre-built ARM64 images are available on [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general). The x86-only instances (496 of 2,294) are not included; use the Epoch x86 images for those.
 
 ## CI
 
-The repo includes a GitHub Actions workflow (`build-images.yml`) that builds and pushes all images via matrixed jobs on ARM64 runners. It splits the dataset into configurable chunks, filters out images that already exist on Docker Hub, and pushes each image individually so partial runs are resumable.
+The repo includes a GitHub Actions workflow (`build-images.yml`) that builds and pushes ARM64 images via matrixed jobs on ARM64 runners. It splits the dataset into configurable chunks, filters out images that already exist on Docker Hub, and pushes each image individually so partial runs are resumable.
 
 ## Built with MIST
 
