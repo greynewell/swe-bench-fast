@@ -73,4 +73,4 @@ The repo includes a GitHub Actions workflow (`build-images.yml`) that builds and
 
 ## Built with MIST
 
-swe-bench-fast is built on the [MIST stack](https://miststack.dev) (Modular Integrated Software Toolkit), a Go framework for CLI applications with structured configuration, lifecycle management, and parallel execution primitives.
+swe-bench-fast is built on the [MIST stack](https://miststack.dev), eval-driven infrastructure for AI systems.
