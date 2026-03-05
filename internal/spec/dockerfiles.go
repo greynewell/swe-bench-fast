@@ -50,7 +50,9 @@ func GenerateBaseDockerfile(arch string) string {
 	b.WriteString("    && bash miniconda.sh -b -p /opt/miniconda3\n")
 	b.WriteString("ENV PATH=/opt/miniconda3/bin:$PATH\n")
 	b.WriteString("RUN conda init --all\n")
-	b.WriteString("RUN conda config --append channels conda-forge\n\n")
+	b.WriteString("RUN conda config --set channel_priority flexible \\\n")
+	b.WriteString("    && conda config --prepend channels defaults \\\n")
+	b.WriteString("    && conda config --append channels conda-forge\n\n")
 
 	b.WriteString("RUN adduser --disabled-password --gecos 'dog' nonroot\n\n")
 

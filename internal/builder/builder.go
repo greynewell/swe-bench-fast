@@ -61,17 +61,31 @@ func BuildAll(ctx context.Context, cfg BuildConfig, specs []spec.ImageSpec) ([]B
 		s := envSpecMap[tag]
 		return buildEnv(ctx, cfg, s)
 	})
+	failedEnvs := make(map[string]bool)
 	for _, r := range envResults {
 		if r.Error != nil {
-			return nil, fmt.Errorf("build env %s: %w", r.Tag, r.Error)
+			fmt.Printf("  ENV FAILED %s: %v\n", r.Tag, r.Error)
+			failedEnvs[r.Tag] = true
 		}
 	}
 
-	// Phase 3: Build instance images (all, parallel)
-	fmt.Printf("Building %d instance image(s) with %d workers...\n", len(specs), cfg.Workers)
-	instanceTags := make([]string, len(specs))
+	// Phase 3: Build instance images (all, parallel), skipping those with failed envs
+	var buildableSpecs []spec.ImageSpec
+	var skippedEnv int
+	for _, s := range specs {
+		if failedEnvs[s.EnvTag] {
+			skippedEnv++
+			continue
+		}
+		buildableSpecs = append(buildableSpecs, s)
+	}
+	if skippedEnv > 0 {
+		fmt.Printf("Skipping %d instance(s) due to env build failures\n", skippedEnv)
+	}
+	fmt.Printf("Building %d instance image(s) with %d workers...\n", len(buildableSpecs), cfg.Workers)
+	instanceTags := make([]string, len(buildableSpecs))
 	instanceSpecMap := make(map[string]spec.ImageSpec)
-	for i, s := range specs {
+	for i, s := range buildableSpecs {
 		instanceTags[i] = s.InstanceTag
 		instanceSpecMap[s.InstanceTag] = s
 	}
