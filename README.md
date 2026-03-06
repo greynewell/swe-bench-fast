@@ -6,13 +6,13 @@ swe-bench-fast does not generate predictions. It only scores them.
 
 ## One-command eval
 
-On ARM64 (Apple Silicon, AWS Graviton), swe-bench-fast pulls native ARM64 images for the 78% of instances that support it, and Epoch x86 images via QEMU for the rest. On x86, everything pulls natively from the Epoch registry. No image builds required.
+swe-bench-fast pulls pre-built images from Docker Hub and runs them natively on your host architecture — ARM64 or x86. On ARM64, 78% of instances run natively; the rest use Epoch x86 images via QEMU. No image builds required.
 
 ```bash
 swe-bench-fast run --dataset swe-bench-full.jsonl --predictions preds.jsonl
 ```
 
-Pre-built ARM64 images: [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general)
+Pre-built images (ARM64 + x86, multi-arch): [Docker Hub](https://hub.docker.com/repository/docker/greynewell/swe-bench-fast/general)
 
 ## 6.3x test runner speedup on ARM64
 
@@ -67,10 +67,10 @@ The runner automatically selects the right image for each instance:
 
 1. **Local image exists?** Use it (from a previous `build`)
 2. **Instance requires x86?** Pull from the x86 registry (Epoch by default), run as `linux/amd64`
-3. **ARM64 registry configured?** Pull from there, run as `linux/arm64`
+3. **Registry configured?** Pull from there using the host architecture — multi-arch manifests in `swe-bench-fast` mean ARM64 hosts get `linux/arm64` and x86 hosts get `linux/amd64` automatically
 4. **Fallback:** Pull from the x86 registry
 
-On ARM64 hardware with the default config, 1,798 of 2,294 instances get native ARM64 images. The remaining 496 (scikit-learn, matplotlib, xarray) pull x86 images and run under QEMU.
+With the default config, 1,798 of 2,294 instances pull from `swe-bench-fast`. The remaining 496 (scikit-learn, matplotlib, xarray) are x86-only and pull from the Epoch registry (QEMU on ARM64).
 
 ## Configuration
 
@@ -83,7 +83,7 @@ mem_limit = "4g"             # container memory limit
 build_workers = 4            # parallel image builds
 
 # Image registries (auto-selected per instance)
-arm64_registry = "docker.io/greynewell/swe-bench-arm64"
+arm64_registry = "docker.io/greynewell/swe-bench-fast"
 x86_registry = "ghcr.io/epoch-research"
 x86_prefix = "swe-bench.eval"
 ```

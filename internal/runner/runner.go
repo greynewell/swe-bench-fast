@@ -90,10 +90,11 @@ func ResolveImage(ctx context.Context, cfg Config, inst dataset.Instance) (image
 		return docker.ImageName(cfg.X86Registry, cfg.X86Prefix, inst.InstanceID, "x86_64"), "linux/amd64"
 	}
 
-	// ARM64 registry configured: use it for ARM64-compatible instances
+	// Registry configured: use it for ARM64-compatible instances, selecting the
+	// platform variant that matches the host arch (supports multi-arch manifests).
 	if cfg.ARM64Registry != "" {
 		tag := sanitizeName(inst.InstanceID)
-		return fmt.Sprintf("%s:%s", cfg.ARM64Registry, tag), "linux/arm64"
+		return fmt.Sprintf("%s:%s", cfg.ARM64Registry, tag), archToPlatform(cfg.Arch)
 	}
 
 	// Fallback: x86 registry (works everywhere, emulated on ARM64)
