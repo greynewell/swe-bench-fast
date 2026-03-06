@@ -215,3 +215,34 @@ jobs:
             --push "$REGISTRY" \
             --workers ${{ inputs.workers }} \
             $FORCE
+
+  # ── Create multi-arch manifests in swe-bench-fast ───────────────────
+  # Runs after both build jobs (even if one was skipped). For each instance
+  # that has at least one arch image built, creates/updates an OCI manifest
+  # list in swe-bench-fast so `docker pull greynewell/swe-bench-fast:<tag>`
+  # automatically selects the right architecture.
+  create-manifests:
+    needs: [build-arm64, build-x86]
+    if: |
+      always() &&
+      (needs.build-arm64.result == 'success' || needs.build-x86.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Create multi-arch manifests
+        run: |
+          SKIP_FLAG=""
+          if [ "${{ inputs.skip_existing }}" = "true" ]; then SKIP_FLAG="--skip-existing"; fi
+          python3 .github/scripts/create-manifests.py \
+            --arm64-dataset swe-bench-arm64.jsonl \
+            --x86-dataset swe-bench-x86.jsonl \
+            --arm64-registry docker.io/greynewell/swe-bench-arm64 \
+            --x86-registry docker.io/greynewell/swe-bench-x86 \
+            --target-registry docker.io/greynewell/swe-bench-fast \
+            $SKIP_FLAG
